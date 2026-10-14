@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 03</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 04</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
 <body><main class="app-shell">
-<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 03</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
+<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 04</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
 
 <section class="hud" aria-label="플레이 현황">
   <div><span>골드</span><strong id="gold">0</strong></div>
@@ -9,27 +9,32 @@
   <div><span>남은 시간</span><strong><b id="timer">20.0</b><small>초</small></strong></div>
 </section>
 
-<section class="card arena main-arena">
-  <div class="section-title"><h2>현재 대상</h2><span class="pill">자동 진행 중</span></div>
-  <div class="target-head"><strong>균열 잔재</strong><span class="muted">HP <b id="enemyHp">50</b> / <b id="enemyHpMax">50</b></span></div>
-  <div class="hpbar"><div id="enemyHpFill"></div></div>
-  <button id="attackBtn" class="attack">공격 <span>+<b id="attackAmount">10</b> 피해</span></button>
-  <p class="stat-note">대상 HP 소진 → 골드 · 장비 드랍 → 다음 웨이브</p>
-</section>
+<section id="tabSheet" class="tab-sheet open" aria-live="polite">
+  <div class="tab-sheet-head"><strong id="tabTitle">홈</strong></div>
 
-<div id="status" class="status" role="status" aria-live="polite">첫 웨이브 진행 중</div>
+  <section id="homeTab" class="tab-panel active" data-tab-panel="home">
+    <section class="card arena main-arena">
+      <div class="section-title"><h2>현재 대상</h2><span class="pill">자동 진행 중</span></div>
+      <div class="target-head"><strong>균열 잔재</strong><span class="muted">HP <b id="enemyHp">50</b> / <b id="enemyHpMax">50</b></span></div>
+      <div class="hpbar"><div id="enemyHpFill"></div></div>
+      <button id="attackBtn" class="attack">공격 <span>+<b id="attackAmount">10</b> 피해</span></button>
+      <p class="stat-note">대상 HP 소진 → 골드 · 경험치 · 장비 드랍 → 다음 웨이브</p>
+    </section>
+    <div id="status" class="status" role="status" aria-live="polite">첫 웨이브 진행 중</div>
+  </section>
 
-<section id="tabSheet" class="tab-sheet" aria-live="polite">
-  <div class="tab-sheet-head"><strong id="tabTitle">스탯</strong><button id="closeTab" class="ghost compact">닫기</button></div>
-
-  <section id="statsTab" class="tab-panel active" data-tab-panel="stats">
+  <section id="statsTab" class="tab-panel" data-tab-panel="stats">
     <div class="stats-grid">
       <div><dt>공격력 / 회</dt><dd id="power">10</dd></div>
       <div><dt>자동 피해 / 초</dt><dd id="autoDps">2.0</dd></div>
       <div><dt>장비 전투력</dt><dd id="equipmentPower">+0</dd></div>
+      <div><dt>치명타 확률</dt><dd id="critChance">5.0%</dd></div>
+      <div><dt>레벨</dt><dd id="playerLevel">Lv.1</dd></div>
+      <div><dt>경험치</dt><dd id="playerXp">0 / 100</dd></div>
+      <div><dt>스킬 포인트</dt><dd id="skillPoints">0</dd></div>
       <div><dt>장비 드랍률</dt><dd id="dropChance">21%</dd></div>
     </div>
-    <p class="stat-note">치명타 · 공격속도 · 골드획득 등 장비 옵션은 현재 설명 전용이야.</p>
+    <p class="stat-note">장비 옵션 효과는 단계적으로 실제 스탯 계산에 연결할 예정이야.</p>
   </section>
 
   <section id="equipmentTab" class="tab-panel" data-tab-panel="equipment">
@@ -43,15 +48,58 @@
   </section>
 
   <section id="upgradeTab" class="tab-panel" data-tab-panel="upgrade">
-    <button id="upgradeAtk" class="upgrade-row"><span>공격력 <small id="attackLevel">Lv.1 · +2</small></span><strong id="atkCost">25 G</strong></button>
-    <button id="upgradeAuto" class="upgrade-row"><span>자동 피해 <small id="autoLevel">Lv.1 · +0.5/초</small></span><strong id="autoCost">40 G</strong></button>
+    <div class="upgrade-subtabs">
+      <button class="upgrade-subtab active" data-upgrade-view="gold">골드 강화</button>
+      <button class="upgrade-subtab" data-upgrade-view="skill">스킬트리</button>
+    </div>
+
+    <div class="upgrade-view active" data-upgrade-panel="gold">
+      <p class="upgrade-balance">보유 골드 <strong><span id="upgradeGold">0</span> G</strong></p>
+      <button id="upgradeAtk" class="upgrade-row"><span>공격력 <small id="attackLevel">Lv.1 · +2 / 회</small></span><strong id="atkCost">25 G</strong></button>
+      <button id="upgradeCrit" class="upgrade-row"><span>치명타 확률 <small id="critLevel">Lv.1 · +0.5%</small></span><strong id="critCost">35 G</strong></button>
+      <button id="upgradeAuto" class="upgrade-row"><span>자동 피해 <small id="autoLevel">Lv.1 · +0.5/초</small></span><strong id="autoCost">40 G</strong></button>
+      <p class="stat-note">골드 강화는 한 판의 즉시 전투 효율을 올리는 성장축이야.</p>
+    </div>
+
+    <div class="upgrade-view" data-upgrade-panel="skill">
+      <div class="skill-head">
+        <div><span>레벨</span><strong id="skillTreeLevel">Lv.1</strong></div>
+        <div><span>보유 포인트</span><strong id="skillTreePoints">0</strong></div>
+      </div>
+      <div class="xp-progress"><div id="xpFill"></div></div>
+      <p class="stat-note"><span id="xpText">0 / 100 XP</span> · 레벨업할 때 스킬 포인트 1 획득</p>
+      <div class="skill-tree">
+        <button class="skill-node" data-skill="power">
+          <span>전투 감각 <small>공격력 +3% / 포인트</small></span><strong id="skillPowerLevel">0</strong>
+        </button>
+        <button class="skill-node" data-skill="crit">
+          <span>정밀 타격 <small>치명타 확률 +0.5% / 포인트</small></span><strong id="skillCritLevel">0</strong>
+        </button>
+        <button class="skill-node" data-skill="growth">
+          <span>성장 가속 <small>경험치 획득 +5% / 포인트</small></span><strong id="skillGrowthLevel">0</strong>
+        </button>
+        <button class="skill-node" data-skill="stamina">
+          <span>지구력 <small>향후 최대 활동력 +5% / 포인트</small></span><strong id="skillStaminaLevel">0</strong>
+        </button>
+      </div>
+      <p class="stat-note">활동력 시스템이 들어오면 지구력 효과를 실제 한 판 지속시간에 연결해.</p>
+    </div>
+  </section>
+
+  <section id="moreTab" class="tab-panel" data-tab-panel="more">
+    <div class="empty-feature">
+      <strong>보조 시스템 자리</strong>
+      <p>다섯 번째 탭은 아직 기능을 고정하지 않고 확장 자리로 남겨둬.</p>
+    </div>
   </section>
 </section>
 
 <nav class="bottom-tabs" aria-label="게임 메뉴">
-  <button class="tab-button active" data-tab="stats"><span>스탯</span><small id="navPower">ATK 10</small></button>
+  <button class="tab-button" data-tab="stats"><span>스탯</span><small id="navPower">ATK 10</small></button>
   <button class="tab-button" data-tab="equipment"><span>장비</span><small id="navEquipment">미장착</small></button>
-  <button class="tab-button" data-tab="upgrade"><span>업그레이드</span><small>강화</small></button>
+  <button class="tab-button home-tab active" data-tab="home"><span>홈</span><small>플레이</small></button>
+  <button class="tab-button" data-tab="upgrade"><span>업그레이드</span><small>강화 · 스킬</small></button>
+  <button class="tab-button" data-tab="more"><span>기타</span><small>준비 중</small></button>
 </nav>
 
 <button id="logBtn" class="log-fab ghost" aria-label="진행 기록">기록</button>
