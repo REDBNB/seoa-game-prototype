@@ -79,3 +79,25 @@ dialog{width:min(600px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflo
   .tab-button span{font-size:10px}
   .tab-button small{font-size:7px}
 }
+
+
+/* Prototype 05 · stamina run loop */
+.run-prep{min-height:260px;display:flex;flex-direction:column;justify-content:center}
+.start-wave-label{display:block;color:var(--muted);font-size:11px;margin:6px 0 7px}
+.start-wave-select{width:100%;min-height:48px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:#10182a;color:var(--text);font:inherit;font-weight:800}
+.start-run{width:100%;margin-top:16px;min-height:54px;font-size:16px}
+.wave-progress{display:flex;justify-content:space-between;gap:12px;padding:10px 0;color:var(--muted);font-size:12px}
+.wave-progress b{color:var(--text)}
+.attack:disabled{background:#263449;color:#78869f}
+.result-reason{padding:12px 14px;border:1px solid #355f54;background:#11251f;border-radius:10px;color:var(--mint);font-weight:800;margin-bottom:14px}
+.result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.result-grid>div{padding:12px;background:#10182a;border:1px solid var(--line);border-radius:10px}
+.result-grid span{display:block;color:var(--muted);font-size:10px}
+.result-grid strong{display:block;margin-top:4px;font-size:18px;font-variant-numeric:tabular-nums}
+.checkpoint-note{margin-top:12px;padding:11px 12px;border-radius:10px;background:#1b263b;color:#d9e6ff;font-size:12px;line-height:1.5}
+#resultDialog .full{min-height:50px;font-size:15px}
+[hidden]{display:none!important}
+@media(max-width:700px){
+  .run-prep{min-height:245px}
+  .result-grid{grid-template-columns:repeat(2,1fr)}
+}
