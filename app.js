@@ -5,9 +5,14 @@ const baseState = () => ({
   wave: 1,
   bestWave: 0,
   attackLevel: 1,
+  critLevel: 1,
   autoLevel: 1,
   baseAttack: 10,
   autoDps: 2,
+  level: 1,
+  xp: 0,
+  skillPoints: 0,
+  skills: { power: 0, crit: 0, growth: 0, stamina: 0 },
   roundTime: 20,
   timeLeft: 20,
   enemyHp: 50,
@@ -21,6 +26,12 @@ const baseState = () => ({
 
 let state = Object.assign(baseState(), saveService.load() || {});
 if (!Array.isArray(state.pendingLoot)) state.pendingLoot = [];
+if (!state.skills || typeof state.skills !== 'object') state.skills = { power: 0, crit: 0, growth: 0, stamina: 0 };
+state.skills = Object.assign({ power: 0, crit: 0, growth: 0, stamina: 0 }, state.skills);
+state.level = Math.max(1, Number(state.level) || 1);
+state.xp = Math.max(0, Number(state.xp) || 0);
+state.skillPoints = Math.max(0, Number(state.skillPoints) || 0);
+state.critLevel = Math.max(1, Number(state.critLevel) || 1);
 let selectedId = null;
 let lootRevision = 0;
 let renderedLootRevision = -1;
@@ -36,12 +47,32 @@ function equipmentPower() {
   const item = state.inventory.find(x => x.id === state.equippedId);
   return item ? item.power : 0;
 }
-function totalAttack() { return state.baseAttack + (state.attackLevel - 1) * 2 + equipmentPower(); }
-function totalAutoDps() { return state.autoDps + (state.autoLevel - 1) * 0.5 + equipmentPower() * 0.12; }
+function powerMultiplier() { return 1 + state.skills.power * 0.03; }
+function critChance() { return Math.min(0.75, 0.05 + (state.critLevel - 1) * 0.005 + state.skills.crit * 0.005); }
+function xpMultiplier() { return 1 + state.skills.growth * 0.05; }
+function totalAttack() { return (state.baseAttack + (state.attackLevel - 1) * 2 + equipmentPower()) * powerMultiplier(); }
+function totalAutoDps() {
+  const raw = (state.autoDps + (state.autoLevel - 1) * 0.5 + equipmentPower() * 0.12) * powerMultiplier();
+  return raw * (1 + critChance());
+}
 function atkCost() { return Math.floor(25 * Math.pow(1.55, state.attackLevel - 1)); }
+function critCost() { return Math.floor(35 * Math.pow(1.58, state.critLevel - 1)); }
 function autoCost() { return Math.floor(40 * Math.pow(1.6, state.autoLevel - 1)); }
+function xpForNextLevel(level = state.level) { return Math.floor(100 * Math.pow(1.35, level - 1)); }
+function xpRewardForWave(wave) { return Math.floor((8 + wave * 3) * xpMultiplier()); }
 function enemyHpForWave(wave) { return Math.floor(50 * Math.pow(1.18, wave - 1)); }
 function rewardForWave(wave) { return 12 + Math.floor(wave * 5.5); }
+function gainXp(amount) {
+  state.xp += amount;
+  let leveled = 0;
+  while (state.xp >= xpForNextLevel()) {
+    state.xp -= xpForNextLevel();
+    state.level += 1;
+    state.skillPoints += 1;
+    leveled += 1;
+  }
+  if (leveled) addLog(`레벨 업! Lv.${state.level} · 스킬 포인트 +${leveled}`);
+}
 
 function addLog(text) {
   state.logs.unshift(text);
@@ -83,9 +114,11 @@ function dropLootChance() {
 
 function killEnemy() {
   const reward = rewardForWave(state.wave);
+  const xpReward = xpRewardForWave(state.wave);
   state.gold += reward;
+  gainXp(xpReward);
   dropLootChance();
-  addLog(`웨이브 ${state.wave} 클리어 · +${reward}G`);
+  addLog(`웨이브 ${state.wave} 클리어 · +${reward}G · +${xpReward}XP`);
   state.bestWave = Math.max(state.bestWave, state.wave);
   state.wave += 1;
   state.timeLeft = state.roundTime;
@@ -108,11 +141,22 @@ function damage(amount) {
   if (state.enemyHp <= 0) killEnemy();
 }
 
-el('attackBtn').addEventListener('click', () => { damage(totalAttack()); render(); });
+el('attackBtn').addEventListener('click', () => {
+  const critical = Math.random() < critChance();
+  const amount = totalAttack() * (critical ? 2 : 1);
+  damage(amount);
+  if (critical) el('status').textContent = `치명타! ${Math.floor(amount).toLocaleString()} 피해`;
+  render();
+});
 el('upgradeAtk').addEventListener('click', () => {
   const cost = atkCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
   state.gold -= cost; state.attackLevel++; addLog(`공격력 강화 Lv.${state.attackLevel}`); persist(); render();
+});
+el('upgradeCrit').addEventListener('click', () => {
+  const cost = critCost();
+  if (state.gold < cost) return addLog('골드가 부족해.');
+  state.gold -= cost; state.critLevel++; addLog(`치명타 강화 Lv.${state.critLevel}`); persist(); render();
 });
 el('upgradeAuto').addEventListener('click', () => {
   const cost = autoCost();
@@ -208,22 +252,39 @@ el('closeLog').addEventListener('click', () => el('logDialog').close());
 
 const tabSheet = el('tabSheet');
 const tabTitle = el('tabTitle');
-const tabLabels = {stats:'스탯', equipment:'장비', upgrade:'업그레이드'};
-let activeTab = 'stats';
-function setTab(name, forceOpen=true) {
+const tabLabels = {stats:'스탯', equipment:'장비', home:'홈', upgrade:'업그레이드', more:'기타'};
+let activeTab = 'home';
+function setTab(name) {
   activeTab = name;
   document.querySelectorAll('[data-tab-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.tabPanel === name));
   document.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button.dataset.tab === name));
   tabTitle.textContent = tabLabels[name] || '';
-  if (forceOpen) tabSheet.classList.add('open');
+  tabSheet.classList.add('open');
 }
-document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => {
-  const same = activeTab === button.dataset.tab && tabSheet.classList.contains('open');
-  if (same && matchMedia('(max-width:700px)').matches) tabSheet.classList.remove('open');
-  else setTab(button.dataset.tab, true);
+document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => setTab(button.dataset.tab)));
+setTab('home');
+
+let activeUpgradeView = 'gold';
+function setUpgradeView(name) {
+  activeUpgradeView = name;
+  document.querySelectorAll('[data-upgrade-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.upgradePanel === name));
+  document.querySelectorAll('[data-upgrade-view]').forEach(button => button.classList.toggle('active', button.dataset.upgradeView === name));
+}
+document.querySelectorAll('[data-upgrade-view]').forEach(button => button.addEventListener('click', () => setUpgradeView(button.dataset.upgradeView)));
+setUpgradeView('gold');
+
+document.querySelectorAll('[data-skill]').forEach(button => button.addEventListener('click', () => {
+  const skill = button.dataset.skill;
+  if (!(skill in state.skills)) return;
+  if (state.skillPoints <= 0) return addLog('사용할 수 있는 스킬 포인트가 없어.');
+  if (state.skills[skill] >= 20) return addLog('이 패시브는 현재 최대 레벨이야.');
+  state.skillPoints -= 1;
+  state.skills[skill] += 1;
+  const names = {power:'전투 감각', crit:'정밀 타격', growth:'성장 가속', stamina:'지구력'};
+  addLog(`${names[skill]} Lv.${state.skills[skill]}`);
+  persist();
+  render();
 }));
-el('closeTab').addEventListener('click', () => tabSheet.classList.remove('open'));
-setTab('stats', !matchMedia('(max-width:700px)').matches);
 
 lootList.addEventListener('click', event => {
   const button = event.target.closest('[data-item-id]');
@@ -241,15 +302,35 @@ function render() {
   hpMaxEl.textContent = state.enemyHpMax;
   hpFill.style.width = `${Math.max(0, state.enemyHp/state.enemyHpMax*100)}%`;
   el('atkCost').textContent = `${atkCost()} G`;
+  el('critCost').textContent = `${critCost()} G`;
   el('autoCost').textContent = `${autoCost()} G`;
   el('autoDps').textContent = totalAutoDps().toFixed(2);
   el('equipmentPower').textContent = `+${equipmentPower()}`;
-  el('attackAmount').textContent = totalAttack();
+  el('attackAmount').textContent = Math.floor(totalAttack()).toLocaleString();
+  el('critChance').textContent = `${(critChance() * 100).toFixed(1)}%`;
+  el('playerLevel').textContent = `Lv.${state.level}`;
+  el('playerXp').textContent = `${Math.floor(state.xp).toLocaleString()} / ${xpForNextLevel().toLocaleString()}`;
+  el('skillPoints').textContent = state.skillPoints;
   el('dropChance').textContent = `${(Math.min(.55, .2 + state.wave * .01) * 100).toFixed(0)}%`;
-  el('attackLevel').textContent = `Lv.${state.attackLevel} · +2`;
+  el('attackLevel').textContent = `Lv.${state.attackLevel} · +2 / 회`;
+  el('critLevel').textContent = `Lv.${state.critLevel} · +0.5%`;
   el('autoLevel').textContent = `Lv.${state.autoLevel} · +0.5/초`;
   el('upgradeAtk').disabled = state.gold < atkCost();
+  el('upgradeCrit').disabled = state.gold < critCost();
   el('upgradeAuto').disabled = state.gold < autoCost();
+  el('upgradeGold').textContent = Math.floor(state.gold).toLocaleString();
+  el('skillTreeLevel').textContent = `Lv.${state.level}`;
+  el('skillTreePoints').textContent = state.skillPoints;
+  el('xpText').textContent = `${Math.floor(state.xp).toLocaleString()} / ${xpForNextLevel().toLocaleString()} XP`;
+  el('xpFill').style.width = `${Math.min(100, state.xp / xpForNextLevel() * 100)}%`;
+  el('skillPowerLevel').textContent = state.skills.power;
+  el('skillCritLevel').textContent = state.skills.crit;
+  el('skillGrowthLevel').textContent = state.skills.growth;
+  el('skillStaminaLevel').textContent = state.skills.stamina;
+  document.querySelectorAll('[data-skill]').forEach(button => {
+    const skill = button.dataset.skill;
+    button.disabled = state.skillPoints <= 0 || state.skills[skill] >= 20;
+  });
   el('inventoryCount').textContent = state.inventory.length;
   el('pendingCount').textContent = state.pendingLoot.length;
   el('pendingBtn').disabled = !state.pendingLoot.length;
