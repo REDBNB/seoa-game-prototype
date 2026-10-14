@@ -192,6 +192,7 @@ function unlockCheckpoint(clearedWave) {
   if (clearedWave < 10 || clearedWave % 10 !== 0) return;
   if (clearedWave <= state.highestCheckpoint) return;
   state.highestCheckpoint = clearedWave;
+  state.selectedStartWave = clearedWave;
   addLog(`체크포인트 해금: ${clearedWave}웨이브`);
 }
 
@@ -283,22 +284,26 @@ el('startWave').addEventListener('change', event => {
 });
 
 el('upgradeAtk').addEventListener('click', () => {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 강화할 수 있어.');
   const cost = atkCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
   state.gold -= cost; state.attackLevel++; addLog(`공격력 강화 Lv.${state.attackLevel}`); persist(); render();
 });
 el('upgradeCrit').addEventListener('click', () => {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 강화할 수 있어.');
   const cost = critCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
   state.gold -= cost; state.critLevel++; addLog(`치명타 강화 Lv.${state.critLevel}`); persist(); render();
 });
 el('upgradeAuto').addEventListener('click', () => {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 강화할 수 있어.');
   const cost = autoCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
   state.gold -= cost; state.autoLevel++; addLog(`자동공격 강화 Lv.${state.autoLevel}`); persist(); render();
 });
 
 el('equipBestBtn').addEventListener('click', () => {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 장비를 정비할 수 있어.');
   if (!state.inventory.length) return addLog('장비가 없어.');
   const best = [...state.inventory].sort((a,b)=>b.power-a.power)[0];
   state.equippedId = best.id; addLog(`${best.name} 장착`); persist(); render();
@@ -354,6 +359,7 @@ function renderComparison() {
   el('storeItem').textContent = pending ? '보관' : '닫기';
 }
 function resolveItem(action) {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 장비를 정비할 수 있어.');
   const item = selectedItem();
   if (!item) return;
   const pending = state.pendingLoot.some(x => x.id === item.id);
@@ -414,6 +420,7 @@ document.querySelectorAll('[data-upgrade-view]').forEach(button => button.addEve
 setUpgradeView('gold');
 
 document.querySelectorAll('[data-skill]').forEach(button => button.addEventListener('click', () => {
+  if (state.runStatus === 'running') return addLog('전투 종료 후 스킬 포인트를 사용할 수 있어.');
   const skill = button.dataset.skill;
   if (!(skill in state.skills)) return;
   if (state.skillPoints <= 0) return addLog('사용할 수 있는 스킬 포인트가 없어.');
@@ -511,9 +518,9 @@ function render() {
   el('attackLevel').textContent = `Lv.${state.attackLevel} · +2 / 회`;
   el('critLevel').textContent = `Lv.${state.critLevel} · +0.5%`;
   el('autoLevel').textContent = `Lv.${state.autoLevel} · +0.5/초`;
-  el('upgradeAtk').disabled = state.gold < atkCost();
-  el('upgradeCrit').disabled = state.gold < critCost();
-  el('upgradeAuto').disabled = state.gold < autoCost();
+  el('upgradeAtk').disabled = running || state.gold < atkCost();
+  el('upgradeCrit').disabled = running || state.gold < critCost();
+  el('upgradeAuto').disabled = running || state.gold < autoCost();
   el('upgradeGold').textContent = Math.floor(state.gold).toLocaleString();
 
   el('skillTreeLevel').textContent = `Lv.${state.level}`;
@@ -526,12 +533,15 @@ function render() {
   el('skillStaminaLevel').textContent = state.skills.stamina;
   document.querySelectorAll('[data-skill]').forEach(button => {
     const skill = button.dataset.skill;
-    button.disabled = state.skillPoints <= 0 || state.skills[skill] >= 20;
+    button.disabled = running || state.skillPoints <= 0 || state.skills[skill] >= 20;
   });
 
   el('inventoryCount').textContent = state.inventory.length;
   el('pendingCount').textContent = state.pendingLoot.length;
-  el('pendingBtn').disabled = !state.pendingLoot.length;
+  el('inventoryBtn').disabled = running;
+  el('pendingBtn').disabled = running || !state.pendingLoot.length;
+  el('equipped').disabled = running;
+  el('equipBestBtn').disabled = running || !state.inventory.length;
   el('navPower').textContent = `ATK ${Math.floor(totalAttack()).toLocaleString()}`;
   const equippedSummary = state.inventory.find(x => x.id === state.equippedId);
   el('navEquipment').textContent = equippedSummary ? `+${equippedSummary.power}` : '미장착';
