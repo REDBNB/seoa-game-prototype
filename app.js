@@ -205,6 +205,26 @@ el('equipped').addEventListener('click', () => {
 });
 el('logBtn').addEventListener('click', () => el('logDialog').showModal());
 el('closeLog').addEventListener('click', () => el('logDialog').close());
+
+const tabSheet = el('tabSheet');
+const tabTitle = el('tabTitle');
+const tabLabels = {stats:'스탯', equipment:'장비', upgrade:'업그레이드'};
+let activeTab = 'stats';
+function setTab(name, forceOpen=true) {
+  activeTab = name;
+  document.querySelectorAll('[data-tab-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.tabPanel === name));
+  document.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button.dataset.tab === name));
+  tabTitle.textContent = tabLabels[name] || '';
+  if (forceOpen) tabSheet.classList.add('open');
+}
+document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => {
+  const same = activeTab === button.dataset.tab && tabSheet.classList.contains('open');
+  if (same && matchMedia('(max-width:700px)').matches) tabSheet.classList.remove('open');
+  else setTab(button.dataset.tab, true);
+}));
+el('closeTab').addEventListener('click', () => tabSheet.classList.remove('open'));
+setTab('stats', !matchMedia('(max-width:700px)').matches);
+
 lootList.addEventListener('click', event => {
   const button = event.target.closest('[data-item-id]');
   if (button) openComparison(button.dataset.itemId);
@@ -233,6 +253,9 @@ function render() {
   el('inventoryCount').textContent = state.inventory.length;
   el('pendingCount').textContent = state.pendingLoot.length;
   el('pendingBtn').disabled = !state.pendingLoot.length;
+  el('navPower').textContent = `ATK ${Math.floor(totalAttack()).toLocaleString()}`;
+  const equippedSummary = state.inventory.find(x => x.id === state.equippedId);
+  el('navEquipment').textContent = equippedSummary ? `+${equippedSummary.power}` : '미장착';
   renderComparison();
   if (renderedLootRevision === lootRevision) return;
   renderedLootRevision = lootRevision;
