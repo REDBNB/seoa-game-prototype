@@ -1,13 +1,3 @@
-const SAVE_KEY = 'seoa-rift-loop-v1';
-
-class LocalSaveService {
-  load() {
-    try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch { return null; }
-  }
-  save(state) { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-  clear() { localStorage.removeItem(SAVE_KEY); }
-}
-
 const saveService = new LocalSaveService();
 
 const baseState = () => ({
@@ -23,12 +13,19 @@ const baseState = () => ({
   enemyHp: 50,
   enemyHpMax: 50,
   inventory: [],
+  pendingLoot: [],
   equippedId: null,
   logs: ['균열이 열렸다. 첫 웨이브 시작.'],
   lastTick: Date.now(),
 });
 
 let state = Object.assign(baseState(), saveService.load() || {});
+if (!Array.isArray(state.pendingLoot)) state.pendingLoot = [];
+let selectedId = null;
+let lootRevision = 0;
+let renderedLootRevision = -1;
+let comparisonKey = '';
+const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
 const el = id => document.getElementById(id);
 const goldEl = el('gold'), powerEl = el('power'), bestWaveEl = el('bestWave');
@@ -49,6 +46,8 @@ function rewardForWave(wave) { return 12 + Math.floor(wave * 5.5); }
 function addLog(text) {
   state.logs.unshift(text);
   state.logs = state.logs.slice(0, 30);
+  el('status').textContent = text;
+  lootRevision++;
 }
 
 function rarityForWave(wave) {
@@ -76,9 +75,9 @@ function dropLootChance() {
   const chance = Math.min(.55, .2 + state.wave * .01);
   if (Math.random() <= chance) {
     const item = makeLoot();
-    state.inventory.unshift(item);
-    state.inventory = state.inventory.slice(0, 12);
+    state.pendingLoot.push(item);
     addLog(`장비 획득: ${item.name} (전투력 +${item.power})`);
+    if (!el('lootDialog').open) openComparison(item.id);
   }
 }
 
@@ -109,7 +108,7 @@ function damage(amount) {
   if (state.enemyHp <= 0) killEnemy();
 }
 
-el('attackBtn').addEventListener('click', () => damage(totalAttack()));
+el('attackBtn').addEventListener('click', () => { damage(totalAttack()); render(); });
 el('upgradeAtk').addEventListener('click', () => {
   const cost = atkCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
@@ -128,9 +127,89 @@ el('equipBestBtn').addEventListener('click', () => {
 el('resetBtn').addEventListener('click', () => {
   if (!confirm('프로토타입 저장 데이터를 초기화할까?')) return;
   saveService.clear(); state = baseState(); persist(); render();
+  selectedId = null; comparisonKey = ''; lootRevision++;
+  document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+  el('status').textContent = state.logs[0]; render();
 });
 
 function persist() { saveService.save(state); }
+
+function itemMarkup(item) {
+  if (!item) return '<div class="muted">장착 장비 없음</div><div class="loot-power">전투력 +0</div>';
+  const rarity = ['일반','희귀','영웅','전설'].includes(item.rarity) ? item.rarity : '일반';
+  return `<div class="loot-name rarity-${rarity}">${escapeHtml(item.name)}</div><div class="loot-power">전투력 +${escapeHtml(item.power)}</div><div class="loot-meta">${item.options.map(escapeHtml).join('<br>')}</div>`;
+}
+function selectedItem() { return [...state.pendingLoot, ...state.inventory].find(item => item.id === selectedId); }
+function openComparison(id) {
+  selectedId = id;
+  comparisonKey = '';
+  renderComparison();
+  if (selectedItem() && !el('lootDialog').open) el('lootDialog').showModal();
+}
+function renderComparison() {
+  const item = selectedItem();
+  if (!item) return;
+  const equipped = state.inventory.find(item => item.id === state.equippedId);
+  const pending = state.pendingLoot.some(x => x.id === item.id);
+  const full = pending && state.inventory.length >= 12;
+  const key = JSON.stringify([item.id, state.equippedId, state.inventory.length, pending, state.pendingLoot.length]);
+  if (key === comparisonKey) return;
+  comparisonKey = key;
+  el('currentItem').innerHTML = itemMarkup(equipped);
+  el('newItem').innerHTML = itemMarkup(item);
+  el('lootContext').textContent = pending ? `NEW DROP · 대기 ${state.pendingLoot.length}개` : 'INVENTORY';
+  el('newItemTitle').textContent = pending ? '새 장비' : '선택한 장비';
+  const delta = item.power - (equipped ? equipped.power : 0);
+  const sign = delta > 0 ? '+' : '';
+  el('comparison').innerHTML = `<div class="${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}">장착 시 공격력 ${sign}${delta} / 회<br>자동 피해 ${sign}${(delta * .12).toFixed(2)} / 초</div>`;
+  el('capacityNote').textContent = full ? '보관함이 가득 찼어. 닫기 → 인벤토리에서 장비를 분해하면 선택할 수 있어. 새 장비는 대기에 남아.' : '';
+  el('equipItem').disabled = full || item.id === state.equippedId;
+  el('equipItem').textContent = item.id === state.equippedId ? '장착 중' : '장착';
+  el('storeItem').disabled = full;
+  el('storeItem').textContent = pending ? '보관' : '닫기';
+}
+function resolveItem(action) {
+  const item = selectedItem();
+  if (!item) return;
+  const pending = state.pendingLoot.some(x => x.id === item.id);
+  if (action !== 'dismantle' && pending && state.inventory.length >= 12) return;
+  if (action === 'dismantle') {
+    if (!confirm(`${item.name}을(를) 분해할까? 장비가 사라지고 보상은 없어.`)) return;
+    state.inventory = state.inventory.filter(x => x.id !== item.id);
+    if (state.equippedId === item.id) state.equippedId = null;
+  } else {
+    if (pending) state.inventory.unshift(item);
+    if (action === 'equip') state.equippedId = item.id;
+  }
+  state.pendingLoot = state.pendingLoot.filter(x => x.id !== item.id);
+  addLog(`${item.name} · ${action === 'equip' ? '장착' : action === 'store' ? '보관' : '분해'}`);
+  selectedId = null;
+  persist(); render(); el('lootDialog').close();
+  if (pending && state.pendingLoot.length) openComparison(state.pendingLoot[0].id);
+}
+el('equipItem').addEventListener('click', () => resolveItem('equip'));
+el('storeItem').addEventListener('click', () => {
+  if (state.pendingLoot.some(x => x.id === selectedId)) resolveItem('store');
+  else el('lootDialog').close();
+});
+el('dismantleItem').addEventListener('click', () => resolveItem('dismantle'));
+el('closeLoot').addEventListener('click', () => el('lootDialog').close());
+el('inventoryBtn').addEventListener('click', () => el('inventoryDialog').showModal());
+el('closeInventory').addEventListener('click', () => el('inventoryDialog').close());
+el('pendingBtn').addEventListener('click', () => {
+  if (state.pendingLoot.length) openComparison(state.pendingLoot[0].id);
+});
+el('equipped').addEventListener('click', () => {
+  if (state.equippedId) openComparison(state.equippedId);
+  else el('inventoryDialog').showModal();
+});
+el('logBtn').addEventListener('click', () => el('logDialog').showModal());
+el('closeLog').addEventListener('click', () => el('logDialog').close());
+lootList.addEventListener('click', event => {
+  const button = event.target.closest('[data-item-id]');
+  if (button) openComparison(button.dataset.itemId);
+});
+el('lootDialog').addEventListener('close', () => { if (!el('lootDialog').open) selectedId = null; });
 
 function render() {
   goldEl.textContent = Math.floor(state.gold).toLocaleString();
@@ -143,19 +222,32 @@ function render() {
   hpFill.style.width = `${Math.max(0, state.enemyHp/state.enemyHpMax*100)}%`;
   el('atkCost').textContent = `${atkCost()} G`;
   el('autoCost').textContent = `${autoCost()} G`;
+  el('autoDps').textContent = totalAutoDps().toFixed(2);
+  el('equipmentPower').textContent = `+${equipmentPower()}`;
+  el('attackAmount').textContent = totalAttack();
+  el('dropChance').textContent = `${(Math.min(.55, .2 + state.wave * .01) * 100).toFixed(0)}%`;
+  el('attackLevel').textContent = `Lv.${state.attackLevel} · +2`;
+  el('autoLevel').textContent = `Lv.${state.autoLevel} · +0.5/초`;
+  el('upgradeAtk').disabled = state.gold < atkCost();
+  el('upgradeAuto').disabled = state.gold < autoCost();
+  el('inventoryCount').textContent = state.inventory.length;
+  el('pendingCount').textContent = state.pendingLoot.length;
+  el('pendingBtn').disabled = !state.pendingLoot.length;
+  renderComparison();
+  if (renderedLootRevision === lootRevision) return;
+  renderedLootRevision = lootRevision;
 
   const equipped = state.inventory.find(x=>x.id===state.equippedId);
   equippedEl.innerHTML = equipped
-    ? `<div class="loot-name">${equipped.name}</div><div class="loot-meta">${equipped.options.join(' · ')}</div><div class="loot-power">전투력 +${equipped.power}</div>`
+    ? itemMarkup(equipped)
     : '장착 장비 없음';
 
-  lootList.innerHTML = state.inventory.length ? state.inventory.slice(0,6).map(item => `
-    <div class="loot-item">
-      <div><div class="loot-name">${item.name}</div><div class="loot-meta">${item.options.join(' · ')}</div></div>
-      <div class="loot-power">+${item.power}</div>
-    </div>`).join('') : '<div class="equipment-empty">아직 드랍된 장비가 없어.</div>';
+  lootList.innerHTML = state.inventory.length ? state.inventory.map(item => `
+    <button class="loot-item" data-item-id="${escapeHtml(item.id)}">
+      <div>${itemMarkup(item)}</div><span class="pill">${item.id === state.equippedId ? '장착 중' : '비교'}</span>
+    </button>`).join('') : '<div class="muted">보관한 장비가 없어.</div>';
 
-  logEl.innerHTML = state.logs.map(x=>`<div>${x}</div>`).join('');
+  logEl.innerHTML = state.logs.map(x=>`<div>${escapeHtml(x)}</div>`).join('');
 }
 
 let last = performance.now();
@@ -171,6 +263,8 @@ function loop(now) {
 state.enemyHpMax = state.enemyHpMax || enemyHpForWave(state.wave);
 state.enemyHp = Math.min(state.enemyHp || state.enemyHpMax, state.enemyHpMax);
 render();
+el('status').textContent = state.logs[0] || '진행 중';
+if (state.pendingLoot.length) openComparison(state.pendingLoot[0].id);
 setInterval(persist, 1500);
 requestAnimationFrame(loop);
 
