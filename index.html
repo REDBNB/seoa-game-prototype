@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 04</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 05</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
 <body><main class="app-shell">
-<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 04</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
+<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 05</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
 
 <section class="hud" aria-label="플레이 현황">
   <div><span>골드</span><strong id="gold">0</strong></div>
-  <div><span>웨이브</span><strong id="wave">1</strong><small>최고 <b id="bestWave">0</b></small></div>
-  <div><span>남은 시간</span><strong><b id="timer">20.0</b><small>초</small></strong></div>
+  <div><span>웨이브</span><strong id="wave">1</strong><small><b id="enemyProgress">0 / 0</b> · 최고 <b id="bestWave">0</b></small></div>
+  <div><span>활동력</span><strong><b id="stamina">100</b><small> / <b id="maxStamina">100</b></small></strong></div>
 </section>
 
 <section id="tabSheet" class="tab-sheet open" aria-live="polite">
   <div class="tab-sheet-head"><strong id="tabTitle">홈</strong></div>
 
   <section id="homeTab" class="tab-panel active" data-tab-panel="home">
-    <section class="card arena main-arena">
-      <div class="section-title"><h2>현재 대상</h2><span class="pill">자동 진행 중</span></div>
+    <section id="runPrep" class="run-prep card">
+      <div class="section-title"><h2>다음 전투 준비</h2><span class="pill" id="checkpointBadge">체크포인트 1</span></div>
+      <label class="start-wave-label" for="startWave">시작 웨이브</label>
+      <select id="startWave" class="start-wave-select"></select>
+      <p class="stat-note">10웨이브를 돌파할 때마다 다음 판 시작 지점이 열린다. 시작 전 장비·골드 강화·스킬트리를 정비한 뒤 직접 출발해.</p>
+      <button id="startRunBtn" class="primary start-run">전투 시작</button>
+    </section>
+
+    <section id="runArena" class="card arena main-arena">
+      <div class="section-title"><h2>현재 대상</h2><span id="runStatePill" class="pill">대기 중</span></div>
+      <div class="wave-progress">
+        <span>웨이브 <b id="arenaWave">1</b></span>
+        <span>몬스터 <b id="arenaEnemyProgress">0 / 0</b></span>
+      </div>
       <div class="target-head"><strong>균열 잔재</strong><span class="muted">HP <b id="enemyHp">50</b> / <b id="enemyHpMax">50</b></span></div>
       <div class="hpbar"><div id="enemyHpFill"></div></div>
       <button id="attackBtn" class="attack">공격 <span>+<b id="attackAmount">10</b> 피해</span></button>
-      <p class="stat-note">대상 HP 소진 → 골드 · 경험치 · 장비 드랍 → 다음 웨이브</p>
+      <p class="stat-note">몬스터 1마리 처치마다 골드 · 경험치 · 장비 드랍 판정 · 활동력 1 소모</p>
     </section>
-    <div id="status" class="status" role="status" aria-live="polite">첫 웨이브 진행 중</div>
+    <div id="status" class="status" role="status" aria-live="polite">정비 후 전투를 시작해.</div>
   </section>
 
   <section id="statsTab" class="tab-panel" data-tab-panel="stats">
@@ -29,10 +41,12 @@
       <div><dt>자동 피해 / 초</dt><dd id="autoDps">2.0</dd></div>
       <div><dt>장비 전투력</dt><dd id="equipmentPower">+0</dd></div>
       <div><dt>치명타 확률</dt><dd id="critChance">5.0%</dd></div>
+      <div><dt>최대 활동력</dt><dd id="statMaxStamina">100</dd></div>
       <div><dt>레벨</dt><dd id="playerLevel">Lv.1</dd></div>
       <div><dt>경험치</dt><dd id="playerXp">0 / 100</dd></div>
       <div><dt>스킬 포인트</dt><dd id="skillPoints">0</dd></div>
-      <div><dt>장비 드랍률</dt><dd id="dropChance">21%</dd></div>
+      <div><dt>장비 드랍률</dt><dd id="dropChance">4.1%</dd></div>
+      <div><dt>최고 체크포인트</dt><dd id="highestCheckpoint">1</dd></div>
     </div>
     <p class="stat-note">장비 옵션 효과는 단계적으로 실제 스탯 계산에 연결할 예정이야.</p>
   </section>
@@ -44,7 +58,7 @@
       <button id="inventoryBtn" class="ghost">인벤토리 <b id="inventoryCount">0</b>/12</button>
       <button id="pendingBtn" class="ghost" disabled>획득 대기 <b id="pendingCount">0</b></button>
     </div>
-    <p class="stat-note">드랍 장비는 즉시 비교 팝업으로 확인하고, 보관한 장비는 인벤토리에서 다시 비교할 수 있어.</p>
+    <p class="stat-note">전투 중 획득한 장비는 대기에 쌓인다. 한 판 종료 후 비교·보관·장착하면서 다음 판을 준비해.</p>
   </section>
 
   <section id="upgradeTab" class="tab-panel" data-tab-panel="upgrade">
@@ -69,41 +83,46 @@
       <div class="xp-progress"><div id="xpFill"></div></div>
       <p class="stat-note"><span id="xpText">0 / 100 XP</span> · 레벨업할 때 스킬 포인트 1 획득</p>
       <div class="skill-tree">
-        <button class="skill-node" data-skill="power">
-          <span>전투 감각 <small>공격력 +3% / 포인트</small></span><strong id="skillPowerLevel">0</strong>
-        </button>
-        <button class="skill-node" data-skill="crit">
-          <span>정밀 타격 <small>치명타 확률 +0.5% / 포인트</small></span><strong id="skillCritLevel">0</strong>
-        </button>
-        <button class="skill-node" data-skill="growth">
-          <span>성장 가속 <small>경험치 획득 +5% / 포인트</small></span><strong id="skillGrowthLevel">0</strong>
-        </button>
-        <button class="skill-node" data-skill="stamina">
-          <span>지구력 <small>향후 최대 활동력 +5% / 포인트</small></span><strong id="skillStaminaLevel">0</strong>
-        </button>
+        <button class="skill-node" data-skill="power"><span>전투 감각 <small>공격력 +3% / 포인트</small></span><strong id="skillPowerLevel">0</strong></button>
+        <button class="skill-node" data-skill="crit"><span>정밀 타격 <small>치명타 확률 +0.5% / 포인트</small></span><strong id="skillCritLevel">0</strong></button>
+        <button class="skill-node" data-skill="growth"><span>성장 가속 <small>경험치 획득 +5% / 포인트</small></span><strong id="skillGrowthLevel">0</strong></button>
+        <button class="skill-node" data-skill="stamina"><span>지구력 <small>최대 활동력 +5% / 포인트</small></span><strong id="skillStaminaLevel">0</strong></button>
       </div>
-      <p class="stat-note">활동력 시스템이 들어오면 지구력 효과를 실제 한 판 지속시간에 연결해.</p>
+      <p class="stat-note">지구력은 다음 판 시작 시 최대 활동력을 늘려서 한 번의 방치 시간을 길게 만든다.</p>
     </div>
   </section>
 
   <section id="moreTab" class="tab-panel" data-tab-panel="more">
-    <div class="empty-feature">
-      <strong>보조 시스템 자리</strong>
-      <p>다섯 번째 탭은 아직 기능을 고정하지 않고 확장 자리로 남겨둬.</p>
-    </div>
+    <div class="empty-feature"><strong>보조 시스템 자리</strong><p>다섯 번째 탭은 아직 기능을 고정하지 않고 확장 자리로 남겨둬.</p></div>
   </section>
 </section>
 
 <nav class="bottom-tabs" aria-label="게임 메뉴">
   <button class="tab-button" data-tab="stats"><span>스탯</span><small id="navPower">ATK 10</small></button>
   <button class="tab-button" data-tab="equipment"><span>장비</span><small id="navEquipment">미장착</small></button>
-  <button class="tab-button home-tab active" data-tab="home"><span>홈</span><small>플레이</small></button>
+  <button class="tab-button home-tab active" data-tab="home"><span>홈</span><small id="navRunState">준비</small></button>
   <button class="tab-button" data-tab="upgrade"><span>업그레이드</span><small>강화 · 스킬</small></button>
   <button class="tab-button" data-tab="more"><span>기타</span><small>준비 중</small></button>
 </nav>
 
 <button id="logBtn" class="log-fab ghost" aria-label="진행 기록">기록</button>
 </main>
+
+<dialog id="resultDialog" aria-labelledby="resultTitle">
+  <div class="dialog-head"><div><div class="eyebrow">RUN COMPLETE</div><h2 id="resultTitle">한 판 종료</h2></div></div>
+  <div class="result-reason" id="resultReason">활동력을 모두 사용했어.</div>
+  <div class="result-grid">
+    <div><span>시작</span><strong id="resultStartWave">1W</strong></div>
+    <div><span>도달</span><strong id="resultEndWave">1W</strong></div>
+    <div><span>처치</span><strong id="resultKills">0</strong></div>
+    <div><span>골드</span><strong id="resultGold">0 G</strong></div>
+    <div><span>경험치</span><strong id="resultXp">0 XP</strong></div>
+    <div><span>장비</span><strong id="resultItems">0개</strong></div>
+  </div>
+  <p id="resultCheckpoint" class="checkpoint-note"></p>
+  <button id="closeResult" class="primary full">정비하러 가기</button>
+  <p class="stat-note">자동 재시작은 하지 않아. 장비·업그레이드·스킬트리를 정비한 뒤 홈에서 직접 다시 시작해.</p>
+</dialog>
 
 <dialog id="lootDialog" aria-labelledby="lootTitle"><div class="dialog-head"><div><div class="eyebrow" id="lootContext">NEW DROP</div><h2 id="lootTitle">장비 비교</h2></div><button id="closeLoot" class="ghost">닫기</button></div><div class="compare-grid"><section><h3>현재 장비</h3><div id="currentItem"></div></section><section><h3 id="newItemTitle">새 장비</h3><div id="newItem"></div></section></div><div id="comparison" class="comparison"></div><p class="stat-note">옵션은 설명 전용 · 장비 전투력만 공격력과 자동 피해에 반영돼.</p><p id="capacityNote" class="capacity-note"></p><div class="item-actions"><button id="equipItem" class="primary">장착</button><button id="storeItem" class="ghost">보관</button><button id="dismantleItem" class="danger">분해</button></div><p class="stat-note">분해하면 장비가 사라져. 현재 분해 보상은 없어.</p></dialog>
 <dialog id="inventoryDialog" aria-labelledby="inventoryTitle"><div class="dialog-head"><div><div class="eyebrow">STORAGE</div><h2 id="inventoryTitle">인벤토리</h2></div><button id="closeInventory" class="ghost">닫기</button></div><p class="stat-note">장비를 눌러 비교하고 직접 선택해. 장착 장비도 보관함에 포함돼.</p><div id="lootList" class="loot-list"></div><button id="equipBestBtn" class="ghost full">최고 전투력 장비 장착</button></dialog>
