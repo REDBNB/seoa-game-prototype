@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <title>SEOA Prototype - Rift Loop</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">SEOA GAME PROTOTYPE</div>
+        <h1>RIFT LOOP</h1>
+      </div>
+      <button id="resetBtn" class="ghost">초기화</button>
+    </header>
+
+    <section class="hud grid-3">
+      <div class="card stat"><span>골드</span><strong id="gold">0</strong></div>
+      <div class="card stat"><span>전투력</span><strong id="power">10</strong></div>
+      <div class="card stat"><span>최고 웨이브</span><strong id="bestWave">0</strong></div>
+    </section>
+
+    <section class="card arena">
+      <div class="arena-head">
+        <div>
+          <div class="eyebrow">CURRENT RUN</div>
+          <h2>웨이브 <span id="wave">1</span></h2>
+        </div>
+        <div class="timer" id="timer">20.0</div>
+      </div>
+
+      <div class="enemy-wrap">
+        <div class="enemy-avatar" id="enemyAvatar">◆</div>
+        <div class="enemy-name" id="enemyName">균열 잔재</div>
+        <div class="hpbar"><div id="enemyHpFill"></div></div>
+        <div class="hptext"><span id="enemyHp">50</span> / <span id="enemyHpMax">50</span></div>
+      </div>
+
+      <button id="attackBtn" class="attack">공격</button>
+      <div class="subtext">자동 공격도 진행돼. 눌러서 조금 더 빠르게 밀 수 있어.</div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="section-title">강화</div>
+        <button id="upgradeAtk" class="upgrade-row">
+          <span>공격력 강화 <small>+2</small></span>
+          <strong id="atkCost">25 G</strong>
+        </button>
+        <button id="upgradeAuto" class="upgrade-row">
+          <span>자동공격 강화 <small>+0.5/s</small></span>
+          <strong id="autoCost">40 G</strong>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">장비</div>
+        <div id="equipped" class="equipment-empty">장착 장비 없음</div>
+        <button id="equipBestBtn" class="ghost full">최고 장비 자동 장착</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title between">
+        <span>최근 드랍</span>
+        <span class="pill">랜덤 옵션</span>
+      </div>
+      <div id="lootList" class="loot-list"></div>
+    </section>
+
+    <section class="card log-card">
+      <div class="section-title">전투 로그</div>
+      <div id="log" class="log"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

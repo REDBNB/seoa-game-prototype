@@ -1,0 +1,64 @@
+:root {
+  --bg: #0b1020;
+  --panel: #151c2f;
+  --panel-2: #1b2540;
+  --line: #2b385a;
+  --text: #edf2ff;
+  --muted: #9aa8c7;
+  --accent: #7c9cff;
+  --accent-2: #55e6c1;
+  --danger: #ff6b7a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #152447 0%, var(--bg) 45%, #070b14 100%);
+  color: var(--text);
+  font-family: Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif;
+}
+button { font: inherit; }
+.app-shell { width: min(920px, 100%); margin: 0 auto; padding: 20px 14px 60px; }
+.topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+h1,h2 { margin:0; }
+h1 { font-size: clamp(24px, 5vw, 38px); letter-spacing:.06em; }
+.eyebrow { color: var(--accent-2); font-size: 11px; letter-spacing: .18em; font-weight: 800; }
+.card { background: linear-gradient(180deg, rgba(27,37,64,.96), rgba(18,25,43,.96)); border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow: 0 16px 40px rgba(0,0,0,.2); }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+.stat span { display:block; color:var(--muted); font-size:12px; }
+.stat strong { display:block; margin-top:5px; font-size:22px; }
+.arena { margin-top:12px; text-align:center; }
+.arena-head { display:flex; justify-content:space-between; align-items:flex-start; }
+.timer { font-size:30px; font-weight:900; color:var(--accent-2); font-variant-numeric: tabular-nums; }
+.enemy-wrap { padding:24px 0 14px; }
+.enemy-avatar { width:96px; height:96px; margin:0 auto 12px; border-radius:28px; display:grid; place-items:center; font-size:42px; background:linear-gradient(145deg,#3a224d,#17213b); border:1px solid #5a467a; box-shadow: inset 0 0 24px rgba(255,255,255,.04), 0 16px 34px rgba(0,0,0,.25); }
+.enemy-name { font-weight:800; font-size:18px; margin-bottom:10px; }
+.hpbar { width:min(520px,100%); height:16px; margin:0 auto; border-radius:999px; overflow:hidden; background:#0e1424; border:1px solid #2a3656; }
+#enemyHpFill { height:100%; width:100%; background:linear-gradient(90deg,#ff536c,#ff8a6b); transition: width .12s linear; }
+.hptext { margin-top:6px; color:var(--muted); font-size:12px; }
+.attack { width:min(420px,100%); margin-top:12px; padding:16px; border:0; border-radius:14px; color:#0b1020; font-weight:900; font-size:18px; cursor:pointer; background:linear-gradient(90deg,var(--accent-2),#9cf1d9); box-shadow:0 10px 24px rgba(85,230,193,.18); }
+.attack:active { transform: translateY(1px) scale(.995); }
+.subtext { color:var(--muted); font-size:12px; margin-top:8px; }
+.section-title { font-weight:900; margin-bottom:12px; }
+.between { display:flex; justify-content:space-between; align-items:center; }
+.upgrade-row { width:100%; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); background:#11192b; color:var(--text); padding:12px; border-radius:12px; margin-top:8px; cursor:pointer; }
+.upgrade-row small { color:var(--accent-2); }
+.ghost { border:1px solid var(--line); color:var(--text); background:transparent; border-radius:10px; padding:9px 12px; cursor:pointer; }
+.full { width:100%; margin-top:10px; }
+.equipment-empty { color:var(--muted); padding:10px 0; }
+.pill { color:var(--accent-2); font-size:11px; border:1px solid #2b6d64; padding:5px 8px; border-radius:999px; }
+.loot-list { display:grid; gap:8px; }
+.loot-item { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 12px; background:#101729; border:1px solid #263453; border-radius:12px; }
+.loot-name { font-weight:800; }
+.loot-meta { color:var(--muted); font-size:12px; margin-top:3px; }
+.loot-power { color:var(--accent-2); font-weight:900; white-space:nowrap; }
+.log-card { margin-top:12px; }
+.log { max-height:180px; overflow:auto; color:#c8d2e8; font-size:12px; line-height:1.7; }
+.log div + div { border-top:1px dashed rgba(255,255,255,.06); }
+@media (max-width:680px){
+  .grid-3 { grid-template-columns:1fr 1fr 1fr; }
+  .grid-2 { grid-template-columns:1fr; }
+  .card { border-radius:15px; padding:14px; }
+  .stat strong { font-size:18px; }
+}
