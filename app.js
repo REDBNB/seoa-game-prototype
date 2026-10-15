@@ -23,14 +23,24 @@ const baseState = () => ({
   stamina: 0,
   runStats: freshRunStats(1),
   attackLevel: 1,
-  critLevel: 1,
+  critDamageLevel: 1,
   autoLevel: 1,
   baseAttack: 10,
   autoDps: 2,
   level: 1,
   xp: 0,
   skillPoints: 0,
-  skills: { power: 0, crit: 0, growth: 0, stamina: 0 },
+  skills: {
+    attackPower: 0,
+    critChance: 0,
+    autoPower: 0,
+    staminaMax: 0,
+    staminaSave: 0,
+    staminaRecover: 0,
+    goldFind: 0,
+    lootFind: 0,
+    rareFind: 0,
+  },
   enemyHp: 50,
   enemyHpMax: 50,
   inventory: [],
@@ -46,11 +56,27 @@ if (!Array.isArray(state.pendingLoot)) state.pendingLoot = [];
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.logs)) state.logs = [];
 if (!state.skills || typeof state.skills !== 'object') state.skills = {};
-state.skills = Object.assign({ power: 0, crit: 0, growth: 0, stamina: 0 }, state.skills);
+const loadedSkills = { ...state.skills };
+state.skills = Object.assign({
+  attackPower: 0,
+  critChance: 0,
+  autoPower: 0,
+  staminaMax: 0,
+  staminaSave: 0,
+  staminaRecover: 0,
+  goldFind: 0,
+  lootFind: 0,
+  rareFind: 0,
+}, loadedSkills);
+// Prototype 05 저장값을 Prototype 06의 세 갈래 스킬트리로 안전하게 이어받는다.
+if (loadedSkills.attackPower == null) state.skills.attackPower = Math.max(0, Number(loadedSkills.power) || 0);
+if (loadedSkills.critChance == null) state.skills.critChance = Math.max(0, Number(loadedSkills.crit) || 0);
+if (loadedSkills.goldFind == null) state.skills.goldFind = Math.max(0, Number(loadedSkills.growth) || 0);
+if (loadedSkills.staminaMax == null) state.skills.staminaMax = Math.max(0, Number(loadedSkills.stamina) || 0);
 state.level = Math.max(1, Number(state.level) || 1);
 state.xp = Math.max(0, Number(state.xp) || 0);
 state.skillPoints = Math.max(0, Number(state.skillPoints) || 0);
-state.critLevel = Math.max(1, Number(state.critLevel) || 1);
+state.critDamageLevel = Math.max(1, Number(state.critDamageLevel || state.critLevel) || 1);
 
 if (state.runSystemVersion !== 1) {
   state.wave = 1;
@@ -86,23 +112,27 @@ function equipmentPower() {
   const item = state.inventory.find(x => x.id === state.equippedId);
   return item ? item.power : 0;
 }
-function powerMultiplier() { return 1 + state.skills.power * 0.03; }
-function critChance() { return Math.min(0.75, 0.05 + (state.critLevel - 1) * 0.005 + state.skills.crit * 0.005); }
-function xpMultiplier() { return 1 + state.skills.growth * 0.05; }
-function maxStamina() { return Math.floor(100 * (1 + state.skills.stamina * 0.05)); }
+function powerMultiplier() { return 1 + state.skills.attackPower * 0.04; }
+function autoPowerMultiplier() { return 1 + state.skills.autoPower * 0.05; }
+function critChance() { return Math.min(0.75, 0.05 + state.skills.critChance * 0.01); }
+function critDamageMultiplier() { return 2 + (state.critDamageLevel - 1) * 0.1; }
+function goldMultiplier() { return 1 + state.skills.goldFind * 0.05; }
+function maxStamina() { return Math.floor(100 * (1 + state.skills.staminaMax * 0.05)); }
+function staminaSaveChance() { return Math.min(0.5, state.skills.staminaSave * 0.02); }
+function staminaRecoverChance() { return Math.min(1, state.skills.staminaRecover * 0.20); }
 function totalAttack() { return (state.baseAttack + (state.attackLevel - 1) * 2 + equipmentPower()) * powerMultiplier(); }
 function totalAutoDps() {
-  const raw = (state.autoDps + (state.autoLevel - 1) * 0.5 + equipmentPower() * 0.12) * powerMultiplier();
-  return raw * (1 + critChance());
+  const raw = (state.autoDps + (state.autoLevel - 1) * 0.5 + equipmentPower() * 0.12) * powerMultiplier() * autoPowerMultiplier();
+  return raw * (1 + critChance() * (critDamageMultiplier() - 1));
 }
 function atkCost() { return Math.floor(25 * Math.pow(1.55, state.attackLevel - 1)); }
-function critCost() { return Math.floor(35 * Math.pow(1.58, state.critLevel - 1)); }
+function critDamageCost() { return Math.floor(35 * Math.pow(1.58, state.critDamageLevel - 1)); }
 function autoCost() { return Math.floor(40 * Math.pow(1.6, state.autoLevel - 1)); }
 function xpForNextLevel(level = state.level) { return Math.floor(100 * Math.pow(1.35, level - 1)); }
 function enemyHpForWave(wave) { return Math.floor(50 * Math.pow(1.12, wave - 1)); }
-function goldRewardForKill(wave) { return 3 + Math.floor(wave * 0.9); }
-function xpRewardForKill(wave) { return Math.floor((2 + wave * 0.6) * xpMultiplier()); }
-function dropChanceForWave(wave) { return Math.min(0.12, 0.04 + wave * 0.001); }
+function goldRewardForKill(wave) { return Math.floor((3 + Math.floor(wave * 0.9)) * goldMultiplier()); }
+function xpRewardForKill(wave) { return Math.floor(2 + wave * 0.6); }
+function dropChanceForWave(wave) { return Math.min(0.35, 0.04 + wave * 0.001 + state.skills.lootFind * 0.005); }
 function enemiesForWave() { return 5 + Math.floor(Math.random() * 6); }
 
 function gainXp(amount) {
@@ -126,7 +156,7 @@ function addLog(text) {
 
 function rarityForWave(wave) {
   const roll = Math.random();
-  const luck = Math.min(0.18, wave * 0.003);
+  const luck = Math.min(0.30, wave * 0.003 + state.skills.rareFind * 0.01);
   if (roll < 0.03 + luck * .25) return ['전설', 2.3];
   if (roll < 0.12 + luck * .5) return ['영웅', 1.7];
   if (roll < 0.35 + luck) return ['희귀', 1.3];
@@ -235,11 +265,14 @@ function killEnemy() {
   state.runStats.xp += xpReward;
   rollLootForKill();
 
-  state.stamina = Math.max(0, state.stamina - 1);
+  if (Math.random() >= staminaSaveChance()) state.stamina = Math.max(0, state.stamina - 1);
   state.waveEnemyIndex += 1;
 
   const completedWave = state.waveEnemyIndex >= state.waveEnemyTotal;
-  if (completedWave) completeWave();
+  if (completedWave) {
+    completeWave();
+    if (Math.random() < staminaRecoverChance()) state.stamina = Math.min(maxStamina(), state.stamina + 1);
+  }
   else {
     state.enemyHpMax = enemyHpForWave(state.wave);
     state.enemyHp = state.enemyHpMax;
@@ -267,7 +300,7 @@ function damage(amount) {
 el('attackBtn').addEventListener('click', () => {
   if (state.runStatus !== 'running') return;
   const critical = Math.random() < critChance();
-  const amount = totalAttack() * (critical ? 2 : 1);
+  const amount = totalAttack() * (critical ? critDamageMultiplier() : 1);
   damage(amount);
   if (critical && state.runStatus === 'running') el('status').textContent = `치명타! ${Math.floor(amount).toLocaleString()} 피해`;
   render();
@@ -289,11 +322,11 @@ el('upgradeAtk').addEventListener('click', () => {
   if (state.gold < cost) return addLog('골드가 부족해.');
   state.gold -= cost; state.attackLevel++; addLog(`공격력 강화 Lv.${state.attackLevel}`); persist(); render();
 });
-el('upgradeCrit').addEventListener('click', () => {
+el('upgradeCritDamage').addEventListener('click', () => {
   if (state.runStatus === 'running') return addLog('전투 종료 후 강화할 수 있어.');
-  const cost = critCost();
+  const cost = critDamageCost();
   if (state.gold < cost) return addLog('골드가 부족해.');
-  state.gold -= cost; state.critLevel++; addLog(`치명타 강화 Lv.${state.critLevel}`); persist(); render();
+  state.gold -= cost; state.critDamageLevel++; addLog(`치명타 피해 강화 Lv.${state.critDamageLevel}`); persist(); render();
 });
 el('upgradeAuto').addEventListener('click', () => {
   if (state.runStatus === 'running') return addLog('전투 종료 후 강화할 수 있어.');
@@ -419,16 +452,28 @@ function setUpgradeView(name) {
 document.querySelectorAll('[data-upgrade-view]').forEach(button => button.addEventListener('click', () => setUpgradeView(button.dataset.upgradeView)));
 setUpgradeView('gold');
 
+const skillNames = {
+  attackPower: '전투 감각',
+  critChance: '정밀 타격',
+  autoPower: '자동 전투',
+  staminaMax: '지구력',
+  staminaSave: '절약 행동',
+  staminaRecover: '호흡 회복',
+  goldFind: '골드 감각',
+  lootFind: '장비 탐색',
+  rareFind: '희귀 감지',
+};
+const SKILL_MAX_LEVEL = 5;
+
 document.querySelectorAll('[data-skill]').forEach(button => button.addEventListener('click', () => {
   if (state.runStatus === 'running') return addLog('전투 종료 후 스킬 포인트를 사용할 수 있어.');
   const skill = button.dataset.skill;
   if (!(skill in state.skills)) return;
   if (state.skillPoints <= 0) return addLog('사용할 수 있는 스킬 포인트가 없어.');
-  if (state.skills[skill] >= 20) return addLog('이 패시브는 현재 최대 레벨이야.');
+  if (state.skills[skill] >= SKILL_MAX_LEVEL) return addLog('이 패시브는 현재 최대 레벨이야.');
   state.skillPoints -= 1;
   state.skills[skill] += 1;
-  const names = {power:'전투 감각', crit:'정밀 타격', growth:'성장 가속', stamina:'지구력'};
-  addLog(`${names[skill]} Lv.${state.skills[skill]}`);
+  addLog(`${skillNames[skill]} Lv.${state.skills[skill]}`);
   persist();
   render();
 }));
@@ -505,21 +550,22 @@ function render() {
   el('attackBtn').disabled = !running;
 
   el('atkCost').textContent = `${atkCost()} G`;
-  el('critCost').textContent = `${critCost()} G`;
+  el('critDamageCost').textContent = `${critDamageCost()} G`;
   el('autoCost').textContent = `${autoCost()} G`;
   el('autoDps').textContent = totalAutoDps().toFixed(2);
   el('equipmentPower').textContent = `+${equipmentPower()}`;
   el('attackAmount').textContent = Math.floor(totalAttack()).toLocaleString();
   el('critChance').textContent = `${(critChance() * 100).toFixed(1)}%`;
+  el('critDamage').textContent = `${Math.round(critDamageMultiplier() * 100)}%`;
   el('playerLevel').textContent = `Lv.${state.level}`;
   el('playerXp').textContent = `${Math.floor(state.xp).toLocaleString()} / ${xpForNextLevel().toLocaleString()}`;
   el('skillPoints').textContent = state.skillPoints;
   el('dropChance').textContent = `${(dropChanceForWave(state.wave) * 100).toFixed(1)}%`;
   el('attackLevel').textContent = `Lv.${state.attackLevel} · +2 / 회`;
-  el('critLevel').textContent = `Lv.${state.critLevel} · +0.5%`;
+  el('critDamageLevel').textContent = `Lv.${state.critDamageLevel} · +10%`;
   el('autoLevel').textContent = `Lv.${state.autoLevel} · +0.5/초`;
   el('upgradeAtk').disabled = running || state.gold < atkCost();
-  el('upgradeCrit').disabled = running || state.gold < critCost();
+  el('upgradeCritDamage').disabled = running || state.gold < critDamageCost();
   el('upgradeAuto').disabled = running || state.gold < autoCost();
   el('upgradeGold').textContent = Math.floor(state.gold).toLocaleString();
 
@@ -527,13 +573,13 @@ function render() {
   el('skillTreePoints').textContent = state.skillPoints;
   el('xpText').textContent = `${Math.floor(state.xp).toLocaleString()} / ${xpForNextLevel().toLocaleString()} XP`;
   el('xpFill').style.width = `${Math.min(100, state.xp / xpForNextLevel() * 100)}%`;
-  el('skillPowerLevel').textContent = state.skills.power;
-  el('skillCritLevel').textContent = state.skills.crit;
-  el('skillGrowthLevel').textContent = state.skills.growth;
-  el('skillStaminaLevel').textContent = state.skills.stamina;
+  Object.keys(skillNames).forEach(skill => {
+    const levelEl = el(`skill-${skill}-level`);
+    if (levelEl) levelEl.textContent = `${state.skills[skill]} / ${SKILL_MAX_LEVEL}`;
+  });
   document.querySelectorAll('[data-skill]').forEach(button => {
     const skill = button.dataset.skill;
-    button.disabled = running || state.skillPoints <= 0 || state.skills[skill] >= 20;
+    button.disabled = running || state.skillPoints <= 0 || state.skills[skill] >= SKILL_MAX_LEVEL;
   });
 
   el('inventoryCount').textContent = state.inventory.length;
