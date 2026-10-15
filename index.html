@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 05</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><title>Rift Loop · UI Prototype 06</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"></head>
 <body><main class="app-shell">
-<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 05</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
+<header class="topbar"><div><div class="eyebrow">SEOA / PROTOTYPE 06</div><h1>RIFT LOOP</h1></div><button id="resetBtn" class="ghost">초기화</button></header>
 
 <section class="hud" aria-label="플레이 현황">
   <div><span>골드</span><strong id="gold">0</strong></div>
@@ -41,6 +41,7 @@
       <div><dt>자동 피해 / 초</dt><dd id="autoDps">2.0</dd></div>
       <div><dt>장비 전투력</dt><dd id="equipmentPower">+0</dd></div>
       <div><dt>치명타 확률</dt><dd id="critChance">5.0%</dd></div>
+      <div><dt>치명타 피해</dt><dd id="critDamage">200%</dd></div>
       <div><dt>최대 활동력</dt><dd id="statMaxStamina">100</dd></div>
       <div><dt>레벨</dt><dd id="playerLevel">Lv.1</dd></div>
       <div><dt>경험치</dt><dd id="playerXp">0 / 100</dd></div>
@@ -70,9 +71,9 @@
     <div class="upgrade-view active" data-upgrade-panel="gold">
       <p class="upgrade-balance">보유 골드 <strong><span id="upgradeGold">0</span> G</strong></p>
       <button id="upgradeAtk" class="upgrade-row"><span>공격력 <small id="attackLevel">Lv.1 · +2 / 회</small></span><strong id="atkCost">25 G</strong></button>
-      <button id="upgradeCrit" class="upgrade-row"><span>치명타 확률 <small id="critLevel">Lv.1 · +0.5%</small></span><strong id="critCost">35 G</strong></button>
       <button id="upgradeAuto" class="upgrade-row"><span>자동 피해 <small id="autoLevel">Lv.1 · +0.5/초</small></span><strong id="autoCost">40 G</strong></button>
-      <p class="stat-note">골드 강화는 한 판의 즉시 전투 효율을 올리는 성장축이야.</p>
+      <button id="upgradeCritDamage" class="upgrade-row"><span>치명타 피해 <small id="critDamageLevel">Lv.1 · +10%</small></span><strong id="critDamageCost">35 G</strong></button>
+      <p class="stat-note">골드는 기본 전투 스펙을 반복 강화한다. 빌드 방향은 스킬트리에서 고른다.</p>
     </div>
 
     <div class="upgrade-view" data-upgrade-panel="skill">
@@ -82,13 +83,33 @@
       </div>
       <div class="xp-progress"><div id="xpFill"></div></div>
       <p class="stat-note"><span id="xpText">0 / 100 XP</span> · 레벨업할 때 스킬 포인트 1 획득</p>
-      <div class="skill-tree">
-        <button class="skill-node" data-skill="power"><span>전투 감각 <small>공격력 +3% / 포인트</small></span><strong id="skillPowerLevel">0</strong></button>
-        <button class="skill-node" data-skill="crit"><span>정밀 타격 <small>치명타 확률 +0.5% / 포인트</small></span><strong id="skillCritLevel">0</strong></button>
-        <button class="skill-node" data-skill="growth"><span>성장 가속 <small>경험치 획득 +5% / 포인트</small></span><strong id="skillGrowthLevel">0</strong></button>
-        <button class="skill-node" data-skill="stamina"><span>지구력 <small>최대 활동력 +5% / 포인트</small></span><strong id="skillStaminaLevel">0</strong></button>
+      <div class="skill-branches">
+        <section class="skill-branch">
+          <div class="skill-branch-head"><strong>공격형</strong><small>더 빠르게 밀고 높은 체크포인트를 노린다.</small></div>
+          <div class="skill-tree">
+            <button class="skill-node" data-skill="attackPower"><span>전투 감각 <small>공격력 +4% / 포인트</small></span><strong id="skill-attackPower-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="critChance"><span>정밀 타격 <small>치명타 확률 +1% / 포인트</small></span><strong id="skill-critChance-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="autoPower"><span>자동 전투 <small>자동 피해 +5% / 포인트</small></span><strong id="skill-autoPower-level">0 / 5</strong></button>
+          </div>
+        </section>
+        <section class="skill-branch">
+          <div class="skill-branch-head"><strong>지구력형</strong><small>한 판을 더 오래 유지한다.</small></div>
+          <div class="skill-tree">
+            <button class="skill-node" data-skill="staminaMax"><span>지구력 <small>최대 활동력 +5% / 포인트</small></span><strong id="skill-staminaMax-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="staminaSave"><span>절약 행동 <small>처치 시 활동력 미소모 +2% / 포인트</small></span><strong id="skill-staminaSave-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="staminaRecover"><span>호흡 회복 <small>웨이브 종료 시 활동력 1 회복 확률 +20% / 포인트</small></span><strong id="skill-staminaRecover-level">0 / 5</strong></button>
+          </div>
+        </section>
+        <section class="skill-branch">
+          <div class="skill-branch-head"><strong>파밍형</strong><small>같은 시간에 더 많은 장비와 보상을 노린다.</small></div>
+          <div class="skill-tree">
+            <button class="skill-node" data-skill="goldFind"><span>골드 감각 <small>골드 획득 +5% / 포인트</small></span><strong id="skill-goldFind-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="lootFind"><span>장비 탐색 <small>장비 드랍률 +0.5%p / 포인트</small></span><strong id="skill-lootFind-level">0 / 5</strong></button>
+            <button class="skill-node" data-skill="rareFind"><span>희귀 감지 <small>희귀도 판정 보정 +1% / 포인트</small></span><strong id="skill-rareFind-level">0 / 5</strong></button>
+          </div>
+        </section>
       </div>
-      <p class="stat-note">지구력은 다음 판 시작 시 최대 활동력을 늘려서 한 번의 방치 시간을 길게 만든다.</p>
+      <p class="stat-note">첫 테스트는 각 패시브 최대 5레벨. 세 방향의 체감 차이를 본 뒤 수치와 항목을 늘린다.</p>
     </div>
   </section>
 
