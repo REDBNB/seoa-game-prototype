@@ -101,3 +101,16 @@ dialog{width:min(600px,calc(100% - 24px));max-height:calc(100dvh - 32px);overflo
   .run-prep{min-height:245px}
   .result-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+
+/* Prototype 06 · three-path skill tree */
+.skill-branches{display:grid;gap:14px;margin-top:14px}
+.skill-branch{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0f1728}
+.skill-branch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.skill-branch-head strong{font-size:14px}
+.skill-branch-head small{max-width:58%;color:var(--muted);font-size:10px;line-height:1.45;text-align:right}
+.skill-branch .skill-tree{margin-top:0}
+@media(max-width:480px){
+  .skill-branch-head{display:block}
+  .skill-branch-head small{display:block;max-width:none;margin-top:4px;text-align:left}
+}
